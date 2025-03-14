@@ -126,7 +126,7 @@ const Services = () => {
             />
           ) : (
             // Mobile background - simple color or pattern
-            <div className="absolute inset-0 bg-gray-900" aria-hidden="true"></div>
+            <div className="absolute inset-0" aria-hidden="true"></div>
           )}
         </div>
       </div>
