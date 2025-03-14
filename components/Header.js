@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -30,6 +30,14 @@ const Header = ({ setIsDropdownOpen }) => {
   const [activeDropdown, setActiveDropdown] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
+  
+  // Add refs for dropdown menus to track mouseout events
+  const dropdownRefs = {
+    digitalMarketing: useRef(null),
+    webDev: useRef(null),
+    consulting: useRef(null),
+    caseStudies: useRef(null)
+  };
   
   // Add a ref to track initial render
   const isInitialRender = useRef(true);
@@ -64,6 +72,36 @@ const Header = ({ setIsDropdownOpen }) => {
     isInitialRender.current = false;
   }, []);
 
+  // Add document click handler to close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      let clickedInsideDropdown = false;
+      
+      // Check if click was inside any dropdown
+      Object.keys(dropdownRefs).forEach(key => {
+        if (dropdownRefs[key].current && 
+            dropdownRefs[key].current.contains(event.target)) {
+          clickedInsideDropdown = true;
+        }
+      });
+      
+      // If clicked outside all dropdowns, close all dropdowns
+      if (!clickedInsideDropdown) {
+        setDropdownStates({
+          digitalMarketing: false,
+          webDev: false,
+          consulting: false,
+          caseStudies: false
+        });
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // No longer using animation
 
   // Toggle mobile menu
@@ -74,7 +112,7 @@ const Header = ({ setIsDropdownOpen }) => {
     setActiveDropdown(activeDropdown === dropdown ? "" : dropdown);
   };
 
-  // Modified handler for desktop dropdown menus to prevent multiple dropdowns opening
+  // Modified handler for desktop dropdown menus with improved mouse tracking
   const handleDropdownToggle = (menu, isOpen) => {
     // Close all other dropdowns when opening a new one
     if (isOpen) {
@@ -87,6 +125,7 @@ const Header = ({ setIsDropdownOpen }) => {
       newDropdownStates[menu] = true;
       setDropdownStates(newDropdownStates);
     } else {
+      // When mouse leaves, close the current dropdown
       setDropdownStates(prev => ({...prev, [menu]: false}));
     }
     
@@ -188,12 +227,14 @@ const Header = ({ setIsDropdownOpen }) => {
     }
   };
 
-  // Menu item generator
+  // Menu item generator with enhanced mouse tracking
   const DesktopDropdownMenu = ({ name, title, items }) => (
     <div
       className="relative"
+      ref={dropdownRefs[name]}
       onMouseEnter={() => handleDropdownToggle(name, true)}
       onMouseLeave={() => handleDropdownToggle(name, false)}
+      onBlur={() => handleDropdownToggle(name, false)} // Close on blur
     >
       <button
         aria-expanded={dropdownStates[name]}
@@ -215,6 +256,7 @@ const Header = ({ setIsDropdownOpen }) => {
           className={`absolute left-0 mt-2 w-64 ${getDropdownBgClass()} rounded-xl shadow-xl p-4 z-50`}
           role="menu"
           aria-label={`${title} menu`}
+          onMouseLeave={() => handleDropdownToggle(name, false)}
         >
           {items.map((item, index) => (
             <Link
