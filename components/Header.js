@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,33 +14,20 @@ import {
   MinusIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/solid";
-// Removed framer-motion import as we're not using animations
 import Image from "next/image";
 
 const Header = ({ setIsDropdownOpen }) => {
   // State for dropdown menus - fixed to have individual control
-  const [dropdownStates, setDropdownStates] = useState({
-    digitalMarketing: false,
-    webDev: false,
-    consulting: false,
-    caseStudies: false
-  });
+  const [openDropdown, setOpenDropdown] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
   
-  // Add refs for dropdown menus to track mouseout events
-  const dropdownRefs = {
-    digitalMarketing: useRef(null),
-    webDev: useRef(null),
-    consulting: useRef(null),
-    caseStudies: useRef(null)
-  };
-  
-  // Add a ref to track initial render
-  const isInitialRender = useRef(true);
+  // Refs for dropdown tracking
+  const dropdownRefs = useRef({});
+  const clickOutsideHandled = useRef(false);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -67,42 +54,24 @@ const Header = ({ setIsDropdownOpen }) => {
     };
   }, []);
 
-  // Set isInitialRender to false after first render
-  useEffect(() => {
-    isInitialRender.current = false;
-  }, []);
-
-  // Add document click handler to close dropdowns when clicking outside
+  // Add global click listener to close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      let clickedInsideDropdown = false;
-      
-      // Check if click was inside any dropdown
-      Object.keys(dropdownRefs).forEach(key => {
-        if (dropdownRefs[key].current && 
-            dropdownRefs[key].current.contains(event.target)) {
-          clickedInsideDropdown = true;
+      if (openDropdown && !clickOutsideHandled.current) {
+        const currentRef = dropdownRefs.current[openDropdown];
+        if (currentRef && !currentRef.contains(event.target)) {
+          setOpenDropdown(null);
+          if (setIsDropdownOpen) setIsDropdownOpen(false);
         }
-      });
-      
-      // If clicked outside all dropdowns, close all dropdowns
-      if (!clickedInsideDropdown) {
-        setDropdownStates({
-          digitalMarketing: false,
-          webDev: false,
-          consulting: false,
-          caseStudies: false
-        });
       }
+      clickOutsideHandled.current = false;
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
-
-  // No longer using animation
+  }, [openDropdown, setIsDropdownOpen]);
 
   // Toggle mobile menu
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -112,24 +81,19 @@ const Header = ({ setIsDropdownOpen }) => {
     setActiveDropdown(activeDropdown === dropdown ? "" : dropdown);
   };
 
-  // Modified handler for desktop dropdown menus with improved mouse tracking
-  const handleDropdownToggle = (menu, isOpen) => {
-    // Close all other dropdowns when opening a new one
-    if (isOpen) {
-      const newDropdownStates = {
-        digitalMarketing: false,
-        webDev: false,
-        consulting: false,
-        caseStudies: false
-      };
-      newDropdownStates[menu] = true;
-      setDropdownStates(newDropdownStates);
-    } else {
-      // When mouse leaves, close the current dropdown
-      setDropdownStates(prev => ({...prev, [menu]: false}));
-    }
+  // Completely redesigned dropdown handling
+  const handleDropdownClick = (menu, event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    clickOutsideHandled.current = true;
     
-    setIsDropdownOpen && setIsDropdownOpen(isOpen);
+    if (openDropdown === menu) {
+      setOpenDropdown(null);
+      if (setIsDropdownOpen) setIsDropdownOpen(false);
+    } else {
+      setOpenDropdown(menu);
+      if (setIsDropdownOpen) setIsDropdownOpen(true);
+    }
   };
 
   // Preload logo images
@@ -227,42 +191,43 @@ const Header = ({ setIsDropdownOpen }) => {
     }
   };
 
-  // Menu item generator with enhanced mouse tracking
+  // Redesigned Menu item generator for click-based dropdowns
   const DesktopDropdownMenu = ({ name, title, items }) => (
-    <div
+    <div 
       className="relative"
-      ref={dropdownRefs[name]}
-      onMouseEnter={() => handleDropdownToggle(name, true)}
-      onMouseLeave={() => handleDropdownToggle(name, false)}
-      onBlur={() => handleDropdownToggle(name, false)} // Close on blur
+      ref={el => dropdownRefs.current[name] = el}
     >
       <button
-        aria-expanded={dropdownStates[name]}
+        aria-expanded={openDropdown === name}
         aria-haspopup="true"
         aria-label={`${title} menu`}
         className={`flex items-center ${getTextColorClasses()} text-base font-bold`}
+        onClick={(e) => handleDropdownClick(name, e)}
       >
         {title}
         <ChevronDownIcon
           className={`w-3 h-3 ml-1 transition-transform duration-300 ${
-            dropdownStates[name] ? "rotate-180" : ""
+            openDropdown === name ? "rotate-180" : ""
           }`}
           aria-hidden="true"
         />
       </button>
 
-      {dropdownStates[name] && (
+      {openDropdown === name && (
         <div
           className={`absolute left-0 mt-2 w-64 ${getDropdownBgClass()} rounded-xl shadow-xl p-4 z-50`}
           role="menu"
           aria-label={`${title} menu`}
-          onMouseLeave={() => handleDropdownToggle(name, false)}
         >
           {items.map((item, index) => (
             <Link
               key={index}
               href={item.href}
               className={`flex items-center py-3 px-4 ${getDropdownTextColor()} group rounded-lg hover:bg-gray-50 hover:bg-opacity-10 transition-colors`}
+              onClick={() => {
+                setOpenDropdown(null);
+                if (setIsDropdownOpen) setIsDropdownOpen(false);
+              }}
             >
               {item.icon && (
                 <item.icon className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform duration-300" />
@@ -286,7 +251,7 @@ const Header = ({ setIsDropdownOpen }) => {
   const MobileDropdownMenu = ({ id, title, items }) => (
     <li className="relative">
       <button
-        className="flex justify-between items-center w-full py-2 px-11 text-left font-light text-gray-800 hover:text-customYellow"
+        className="flex justify-between items-center w-full py-2 px-4 text-left font-light text-gray-800 hover:text-customYellow"
         onClick={() => handleMobileDropdownToggle(id)}
       >
         <span className="flex items-center">
