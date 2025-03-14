@@ -17,7 +17,7 @@ import {
 import Image from "next/image";
 
 const Header = ({ setIsDropdownOpen }) => {
-  // State for dropdown menus - fixed to have individual control
+  // State for hover tracking
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,9 +25,9 @@ const Header = ({ setIsDropdownOpen }) => {
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
   
-  // Refs for dropdown tracking
+  // Refs for handling hover detection
   const dropdownRefs = useRef({});
-  const clickOutsideHandled = useRef(false);
+  const hoverTimeouts = useRef({});
 
   // Check for mobile viewport
   useEffect(() => {
@@ -57,14 +57,13 @@ const Header = ({ setIsDropdownOpen }) => {
   // Add global click listener to close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openDropdown && !clickOutsideHandled.current) {
+      if (openDropdown) {
         const currentRef = dropdownRefs.current[openDropdown];
         if (currentRef && !currentRef.contains(event.target)) {
           setOpenDropdown(null);
           if (setIsDropdownOpen) setIsDropdownOpen(false);
         }
       }
-      clickOutsideHandled.current = false;
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -72,6 +71,15 @@ const Header = ({ setIsDropdownOpen }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [openDropdown, setIsDropdownOpen]);
+
+  // Clear all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(hoverTimeouts.current).forEach(timeout => {
+        clearTimeout(timeout);
+      });
+    };
+  }, []);
 
   // Toggle mobile menu
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -81,18 +89,26 @@ const Header = ({ setIsDropdownOpen }) => {
     setActiveDropdown(activeDropdown === dropdown ? "" : dropdown);
   };
 
-  // Completely redesigned dropdown handling
-  const handleDropdownClick = (menu, event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    clickOutsideHandled.current = true;
+  // Advanced hover handling with debounce
+  const handleDropdownHover = (menu, isHovering) => {
+    // Clear any existing timeout for this menu
+    if (hoverTimeouts.current[menu]) {
+      clearTimeout(hoverTimeouts.current[menu]);
+      hoverTimeouts.current[menu] = null;
+    }
     
-    if (openDropdown === menu) {
-      setOpenDropdown(null);
-      if (setIsDropdownOpen) setIsDropdownOpen(false);
-    } else {
+    if (isHovering) {
+      // Open the dropdown immediately
       setOpenDropdown(menu);
       if (setIsDropdownOpen) setIsDropdownOpen(true);
+    } else {
+      // Set a small delay before closing to allow moving to submenu
+      hoverTimeouts.current[menu] = setTimeout(() => {
+        if (openDropdown === menu) {
+          setOpenDropdown(null);
+          if (setIsDropdownOpen) setIsDropdownOpen(false);
+        }
+      }, 150); // Small delay to prevent accidental closes
     }
   };
 
@@ -191,18 +207,19 @@ const Header = ({ setIsDropdownOpen }) => {
     }
   };
 
-  // Redesigned Menu item generator for click-based dropdowns
+  // Redesigned Menu item generator for hover-based dropdowns with improved reliability
   const DesktopDropdownMenu = ({ name, title, items }) => (
     <div 
       className="relative"
       ref={el => dropdownRefs.current[name] = el}
+      onMouseEnter={() => handleDropdownHover(name, true)}
+      onMouseLeave={() => handleDropdownHover(name, false)}
     >
       <button
         aria-expanded={openDropdown === name}
         aria-haspopup="true"
         aria-label={`${title} menu`}
         className={`flex items-center ${getTextColorClasses()} text-base font-bold`}
-        onClick={(e) => handleDropdownClick(name, e)}
       >
         {title}
         <ChevronDownIcon
@@ -218,6 +235,8 @@ const Header = ({ setIsDropdownOpen }) => {
           className={`absolute left-0 mt-2 w-64 ${getDropdownBgClass()} rounded-xl shadow-xl p-4 z-50`}
           role="menu"
           aria-label={`${title} menu`}
+          onMouseEnter={() => handleDropdownHover(name, true)} 
+          onMouseLeave={() => handleDropdownHover(name, false)}
         >
           {items.map((item, index) => (
             <Link
@@ -225,6 +244,7 @@ const Header = ({ setIsDropdownOpen }) => {
               href={item.href}
               className={`flex items-center py-3 px-4 ${getDropdownTextColor()} group rounded-lg hover:bg-gray-50 hover:bg-opacity-10 transition-colors`}
               onClick={() => {
+                handleDropdownHover(name, false);
                 setOpenDropdown(null);
                 if (setIsDropdownOpen) setIsDropdownOpen(false);
               }}
