@@ -43,7 +43,7 @@ const services = [
 const Services = () => {
   const [isSingleColumn, setIsSingleColumn] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false); // Start at false for transition effect
   const [windowWidth, setWindowWidth] = useState(0);
 
   useEffect(() => {
@@ -77,13 +77,25 @@ const Services = () => {
       observer.observe(section);
     }
 
+    // Make sure content becomes visible even if image loading fails
+    // This is crucial for mobile view
+    const timer = setTimeout(() => {
+      setIsLoaded(true);
+    }, 1000);
+
     return () => {
       window.removeEventListener("resize", handleResize);
       if (section) {
         observer.unobserve(section);
       }
+      clearTimeout(timer);
     };
   }, []);
+
+  // Update isLoaded when services.webp image loads
+  const handleMainImageLoad = () => {
+    setIsLoaded(true);
+  };
 
   return (
     <section
@@ -94,10 +106,10 @@ const Services = () => {
         transition: "opacity 0.3s ease-in-out",
       }}
     >
-      {/* Background Image with responsive handling */}
-      {!isSingleColumn && (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-[-10%] sm:inset-[-5%]">
+      {/* Background Image - Now with a mobile fallback */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute inset-[-10%] sm:inset-[-5%]">
+          {!isSingleColumn ? (
             <Image
               src="/assets/images/bg.webp"
               alt="Background"
@@ -112,9 +124,12 @@ const Services = () => {
                 objectPosition: windowWidth < 768 ? 'center center' : '50% 50%'
               }}
             />
-          </div>
+          ) : (
+            // Mobile background - simple color or pattern
+            <div className="absolute inset-0 bg-gray-900" aria-hidden="true"></div>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-10">
         <div className="flex flex-col lg:flex-row items-center">
@@ -139,6 +154,7 @@ const Services = () => {
                   className="object-contain"
                   sizes="(max-width: 640px) 90vw, (max-width: 1024px) 50vw, 40vw"
                   quality={85}
+                  onLoad={handleMainImageLoad}
                   placeholder="blur"
                   blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx4eHRoaHSUvJR8lPTw1PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT3/2wBDARUXFyAeIB8gID0lJT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
                 />

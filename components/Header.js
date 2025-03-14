@@ -179,7 +179,7 @@ const Header = ({ setIsDropdownOpen }) => {
     return pathname === "/"
       ? isScrolled
         ? "text-customGray hover:text-customYellow"
-        : "text-customGray hover:text-customYellow"
+        : "text-customGray hover:text-gray-400"
       : isScrolled
       ? "text-customGray hover:text-customYellow"
       : "text-white hover:text-customYellow";
