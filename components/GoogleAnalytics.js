@@ -36,6 +36,16 @@ const GoogleAnalyticsTracking = memo(function GoogleAnalyticsTracking() {
           send_to: GA_MEASUREMENT_ID,
           debug_mode: DEBUG_MODE
         });
+        
+        // Track if this is the contact page for easier segmentation
+        if (pathname === '/contact-us') {
+          window.gtag("event", "contact_page_view", {
+            send_to: GA_MEASUREMENT_ID,
+            debug_mode: DEBUG_MODE
+          });
+          
+          logAnalytics('Contact Page', 'Contact page visited');
+        }
       } else {
         logAnalytics('Error', 'gtag not found');
       }
@@ -64,6 +74,10 @@ function useDelayedLoad() {
 
 export default function GoogleTrackingComponent() {
   const shouldLoadTracking = useDelayedLoad();
+  const pathname = usePathname();
+  
+  // Track if we're on the contact page
+  const isContactPage = pathname === '/contact-us';
 
   useEffect(() => {
     // Verify tracking installation
@@ -76,12 +90,17 @@ export default function GoogleTrackingComponent() {
             debug_mode: true,
             send_to: GA_MEASUREMENT_ID
           });
+          
+          // If on contact page, log additional info
+          if (isContactPage) {
+            logAnalytics('Contact Page', 'Contact page tracking active');
+          }
         } else {
           logAnalytics('Error', 'Google tracking not installed properly');
         }
       }, 2000);
     }
-  }, []);
+  }, [isContactPage]);
 
   if (!shouldLoadTracking) return null;
 
@@ -127,6 +146,19 @@ export default function GoogleTrackingComponent() {
             
             // Google Ads configuration
             gtag('config', '${GOOGLE_ADS_ID}');
+            
+            // Define conversion tracking helper functions
+            window.trackPhoneCallConversion = function() {
+              gtag('event', 'conversion', {
+                'send_to': 'AW-16917143672/qxkRCPqN0qsaEPjA3II_'
+              });
+            };
+            
+            window.trackFormSubmissionConversion = function() {
+              gtag('event', 'conversion', {
+                'send_to': 'AW-16917143672/LaiLCKf31asaEPjA3II_'
+              });
+            };
           `,
         }}
         onLoad={() => logAnalytics('Config loaded', 'Google tracking configuration complete')}

@@ -51,6 +51,17 @@ const ContactUs = () => {
     }));
   };
 
+  // Track phone call conversion when phone number is clicked
+  const handlePhoneClick = () => {
+    // Trigger Google Ads phone call conversion
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'conversion', {
+        'send_to': 'AW-16917143672/qxkRCPqN0qsaEPjA3II_'
+      });
+      console.log('[Tracking] Phone call conversion tracked');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -73,7 +84,15 @@ const ContactUs = () => {
       });
 
       if (response.ok) {
-        // Instead of showing message in the form, redirect to success page
+        // Track form submission conversion
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'conversion', {
+            'send_to': 'AW-16917143672/LaiLCKf31asaEPjA3II_'
+          });
+          console.log('[Tracking] Form submission conversion tracked');
+        }
+        
+        // Redirect to success page
         router.push('/success');
       } else {
         setFormStatus("error");
@@ -112,6 +131,7 @@ const ContactUs = () => {
                 onChange={handleChange}
                 placeholder="Enter your full name"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-customYellow"
+                required
               />
               <input
                 type="email"
@@ -120,6 +140,7 @@ const ContactUs = () => {
                 onChange={handleChange}
                 placeholder="Enter your email address"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-customYellow"
+                required
               />
               <textarea
                 name="message"
@@ -127,6 +148,7 @@ const ContactUs = () => {
                 onChange={handleChange}
                 placeholder="Go ahead, we're listening..."
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-customYellow h-32 resize-none"
+                required
               />
               <button
                 type="submit"
@@ -166,6 +188,7 @@ const ContactUs = () => {
                   <Link
                     href="tel:021 246 3988"
                     className="hover:text-customYellow transition-colors"
+                    onClick={handlePhoneClick}
                   >
                     021 246 3988
                   </Link>
